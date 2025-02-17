@@ -17,7 +17,7 @@ public class DBUtils {
 
     private final static DateTimeFormatter formatterDateTime = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
 
-    public static String selectrains(int train, String date) {
+    public static String selectTrains(int train, String date) {
 
         Map<String, Object> resultMap = new HashMap<>();
         List<Map<String, Object>> stations = new ArrayList<>();

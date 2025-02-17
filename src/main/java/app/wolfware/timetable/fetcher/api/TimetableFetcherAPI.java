@@ -67,7 +67,7 @@ public class TimetableFetcherAPI extends AbstractVerticle {
                 return;
             }
 
-            String answer = DBUtils.selectrains(train, strDate);
+            String answer = DBUtils.selectTrains(train, strDate);
             if (answer != null) {
                 context.response()
                         .putHeader("content-type", "application/json")
