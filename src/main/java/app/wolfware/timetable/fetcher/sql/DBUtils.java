@@ -60,9 +60,9 @@ public class DBUtils {
                 }
                 stationData.put("arrival_pp", rs.getString("arrival_pp"));
                 stationData.put("departure_pp", rs.getString("departure_pp"));
-                stationData.put("wings_arrival_id", rs.getString("arrival_id"));
+                //stationData.put("wings_arrival_id", rs.getString("arrival_id"));
                 stationData.put("wings_arrival_number", rs.getString("arrival_number"));
-                stationData.put("wings_departure_id", rs.getString("departure_id"));
+                //stationData.put("wings_departure_id", rs.getString("departure_id"));
                 stationData.put("wings_departure_number", rs.getString("departure_number"));
                 stations.add(stationData);
             }
