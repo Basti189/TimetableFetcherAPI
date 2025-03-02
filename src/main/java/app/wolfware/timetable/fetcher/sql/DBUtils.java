@@ -14,7 +14,7 @@ import java.util.Map;
 public class DBUtils {
 
     private final static String select_train = "SELECT t.id, t.number, j.position, s.name, s.alias, j.arrival_pt, j.arrival_pp, j.departure_pt, j.departure_pp, art.number AS 'arrival_number', art.id AS 'arrival_id', dt.number AS 'departure_number', dt.id AS 'departure_id' FROM train t left join journey j on j.id = t.id LEFT JOIN station s ON s.id = j.station LEFT JOIN train art ON art.id = j.arrival_wings LEFT JOIN train dt ON dt.id = j.departure_wings WHERE t.number = ? AND t.id like ? ORDER BY j.position ASC";
-
+    private final static String select_additional_info = "SELECT * from additional_info WHERE id = ?";
     private final static DateTimeFormatter formatterDateTime = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
 
     public static String selectTrains(int train, String date) {
@@ -23,13 +23,13 @@ public class DBUtils {
         List<Map<String, Object>> stations = new ArrayList<>();
 
         boolean foundTrain = false;
+        String id = null;
 
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(select_train)) {
             pstmt.setInt(1, train);
             pstmt.setString(2, "%-" + date + "%");
 
-            String id = null;
             int number = -1;
 
             ResultSet rs = pstmt.executeQuery();
@@ -69,6 +69,19 @@ public class DBUtils {
             resultMap.put("stations", stations);
             resultMap.put("number", number);
             resultMap.put("id", id);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        try (Connection conn = DBUtils.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(select_additional_info)) {
+            pstmt.setString(1, id);
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                String field = rs.getString("field");
+                String value = rs.getString("value");
+                resultMap.put(field, value);
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
