@@ -3,13 +3,18 @@ package app.wolfware.timetable.fetcher.api;
 import app.wolfware.timetable.fetcher.sql.DBUtils;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpServerResponse;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.zip.GZIPOutputStream;
 
 public class TimetableFetcherAPI extends AbstractVerticle {
 
@@ -25,7 +30,7 @@ public class TimetableFetcherAPI extends AbstractVerticle {
         Router router = Router.router(vertx);
 
         router.route().handler(BodyHandler.create());
-        router.get("/api/timetable/v1/:date/:train").handler(this::handleTrainRequest);
+        router.get("/api/timetable/v1/train").handler(this::handleTrainRequest);
 
         // Create the HTTP server
         vertx.createHttpServer()
@@ -46,8 +51,8 @@ public class TimetableFetcherAPI extends AbstractVerticle {
     }
 
     private void handleTrainRequest(RoutingContext context) {
-        String strDate = context.pathParam("date");
-        String strTrain = context.pathParam("train");
+        String strDate = context.request().getParam("date");
+        String strTrain = context.request().getParam("number");
 
         if (strTrain != null && !strTrain.isEmpty() && strDate != null && !strDate.isEmpty()) {
             int train;
@@ -68,10 +73,21 @@ public class TimetableFetcherAPI extends AbstractVerticle {
             }
 
             String answer = DBUtils.selectTrains(train, strDate);
+
+            HttpServerResponse response = context.response();
+            response.putHeader("Content-Type", "application/json");
+
             if (answer != null) {
-                context.response()
-                        .putHeader("content-type", "application/json")
-                        .end(answer);
+                if (context.request().getHeader("Accept-Encoding") != null &&
+                        context.request().getHeader("Accept-Encoding").contains("gzip")) {
+                    response.putHeader("Content-Encoding", "gzip");
+                    byte[] compressedData = gzipCompress(answer);
+                    response.setChunked(true);
+                    response.write(Buffer.buffer(compressedData));
+                    response.end();
+                } else {
+                    response.end(answer);
+                }
             } else {
                 error(context, "train not found");
             }
@@ -83,7 +99,21 @@ public class TimetableFetcherAPI extends AbstractVerticle {
     private void error(RoutingContext context, String msg) {
         context.response()
                 .setStatusCode(400)
-                .putHeader("content-type", "application/json")
                 .end("{\"error\": \"" + msg + "\"}");
+    }
+
+    // Methode zur Gzip-Komprimierung eines Strings
+    private byte[] gzipCompress(String data) {
+        try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+             GZIPOutputStream gzipOutputStream = new GZIPOutputStream(byteArrayOutputStream)) {
+
+            byte[] inputBytes = data.getBytes(StandardCharsets.UTF_8);
+            gzipOutputStream.write(inputBytes);
+            gzipOutputStream.close();
+            return byteArrayOutputStream.toByteArray();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new byte[0]; // Im Fehlerfall gib ein leeres Array zurück
+        }
     }
 }
