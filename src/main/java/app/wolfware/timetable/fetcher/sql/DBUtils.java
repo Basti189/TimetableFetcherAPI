@@ -13,7 +13,7 @@ import java.util.Map;
 
 public class DBUtils {
 
-    private final static String select_train = "SELECT t.id, t.number, t.origin, t.destination, j.position, s.name, s.alias, j.arrival_pt, j.arrival_pp, j.departure_pt, j.departure_pp, art.number AS 'arrival_number', art.id AS 'arrival_id', dt.number AS 'departure_number', dt.id AS 'departure_id', tt.id AS 'transition_id', tt.number AS 'transition_number', tt.timestamp AS 'transition_timestamp', tt.origin AS 'transition_origin', tt.destination AS 'transition_destination' FROM train t left join journey j on j.id = t.id LEFT JOIN station s ON s.id = j.station LEFT JOIN train art ON art.id = j.arrival_wings LEFT JOIN train dt ON dt.id = j.departure_wings LEFT JOIN train tt on tt.id = j.transition WHERE t.number = ? AND t.id like ? ORDER BY j.position ASC";
+    private final static String select_train = "SELECT t.id, t.number, t.origin, t.destination, j.position, s.name, s.alias, j.arrival_pt, j.arrival_pp, j.departure_pt, j.departure_pp, jc.arrival_ct, jc.arrival_cp, jc.departure_ct, jc.departure_cp, jc.arrival_cs, jc.departure_cs, jc.arrival_clt, jc.departure_clt, art.number AS 'arrival_number', art.id AS 'arrival_id', dt.number AS 'departure_number', dt.id AS 'departure_id', tt.id AS 'transition_id', tt.number AS 'transition_number', tt.timestamp AS 'transition_timestamp', tt.origin AS 'transition_origin', tt.destination AS 'transition_destination' FROM train t left join journey j on j.id = t.id LEFT JOIN station s ON s.id = j.station LEFT JOIN train art ON art.id = j.arrival_wings LEFT JOIN train dt ON dt.id = j.departure_wings LEFT JOIN train tt on tt.id = j.transition LEFT JOIN journey_changes jc ON j.id = jc.id AND jc.position = j.position WHERE t.number = ? AND t.id like ? ORDER BY j.position ASC";
     private final static String select_additional_info = "SELECT * from additional_train_info WHERE id = ?";
     private final static DateTimeFormatter formatterDateTime = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
 
@@ -51,6 +51,8 @@ public class DBUtils {
 
                 Timestamp arrivalTimestamp = rs.getTimestamp("arrival_pt");
                 Timestamp departureTimestamp = rs.getTimestamp("departure_pt");
+                Timestamp changeArrivalTimestamp = rs.getTimestamp("arrival_ct");
+                Timestamp changeDepartureTimestamp = rs.getTimestamp("departure_ct");
 
                 if (arrivalTimestamp != null) {
                     stationData.put("arrival_pt", formatterDateTime.format(arrivalTimestamp.toLocalDateTime()));
@@ -62,8 +64,36 @@ public class DBUtils {
                 } else {
                     stationData.put("departure_pt", null);
                 }
+                if (changeArrivalTimestamp != null) {
+                    stationData.put("arrival_ct", formatterDateTime.format(changeArrivalTimestamp.toLocalDateTime()));
+                }
+                if (changeDepartureTimestamp != null) {
+                    stationData.put("departure_ct", formatterDateTime.format(changeDepartureTimestamp.toLocalDateTime()));
+                }
                 stationData.put("arrival_pp", rs.getString("arrival_pp"));
                 stationData.put("departure_pp", rs.getString("departure_pp"));
+                if (rs.getString("arrival_cp") != null) {
+                    stationData.put("arrival_cp", rs.getString("arrival_cp"));
+                }
+                if (rs.getString("departure_cp") != null) {
+                    stationData.put("departure_cp", rs.getString("departure_cp"));
+                }
+                String arrival_cs = rs.getString("arrival_cs");
+                String departure_cs = rs.getString("departure_cs");
+                Timestamp arrival_clt = rs.getTimestamp("arrival_clt");
+                Timestamp departure_clt = rs.getTimestamp("departure_clt");
+                if (arrival_cs != null) {
+                    stationData.put("arrival_cs", arrival_cs);
+                    if (arrival_cs.equals("c") && arrival_clt != null) {
+                        stationData.put("arrival_clt", formatterDateTime.format(arrival_clt.toLocalDateTime()));
+                    }
+                }
+                if (departure_cs != null) {
+                    stationData.put("departure_cs", departure_cs);
+                    if (departure_cs.equals("c") && departure_clt != null) {
+                        stationData.put("departure_clt", formatterDateTime.format(departure_clt.toLocalDateTime()));
+                    }
+                }
                 //stationData.put("wings_arrival_id", rs.getString("arrival_id"));
                 stationData.put("wings_arrival_number", rs.getString("arrival_number"));
                 //stationData.put("wings_departure_id", rs.getString("departure_id"));
@@ -93,6 +123,7 @@ public class DBUtils {
             e.printStackTrace();
         }
 
+        /*
         try (Connection conn = DBUtils.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(select_additional_info)) {
             pstmt.setString(1, id);
@@ -104,7 +135,7 @@ public class DBUtils {
             }
         } catch (SQLException e) {
             e.printStackTrace();
-        }
+        }*/
 
         if (foundTrain) {
             ObjectMapper objectMapper = new ObjectMapper();
