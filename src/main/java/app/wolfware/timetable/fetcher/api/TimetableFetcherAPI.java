@@ -53,8 +53,9 @@ public class TimetableFetcherAPI extends AbstractVerticle {
     private void handleTrainRequest(RoutingContext context) {
         String strDate = context.request().getParam("date");
         String strTrain = context.request().getParam("number");
+        String strMeta = context.request().getParam("meta");
 
-        if (strTrain != null && !strTrain.isEmpty() && strDate != null && !strDate.isEmpty()) {
+        if (strTrain != null && !strTrain.isEmpty()) {
             int train;
             try {
                 train = Integer.parseInt(strTrain);
@@ -64,15 +65,30 @@ public class TimetableFetcherAPI extends AbstractVerticle {
                 return;
             }
 
-            try {
-                LocalDate.parse(strDate, formatterDate);
-            } catch (DateTimeException dte) {
-                // dte.printStackTrace();
-                error(context, "Wrong date format");
-                return;
+            if (strDate != null && !strDate.isEmpty()) {
+                try {
+                    LocalDate.parse(strDate, formatterDate);
+                } catch (DateTimeException dte) {
+                    // dte.printStackTrace();
+                    error(context, "Wrong date format");
+                    return;
+                }
             }
 
-            String answer = DBUtils.selectTrains(train, strDate);
+            if (strMeta != null && !strMeta.isEmpty()) {
+                try {
+                    int m = Integer.parseInt(strMeta);
+                    if (!(m == 0 || m == 1)) {
+                        strMeta = null;
+                    }
+                } catch (NumberFormatException nfe) {
+                    strMeta = null;
+                }
+            } else {
+                strMeta = null;
+            }
+
+            String answer = DBUtils.selectTrains(train, strDate, strMeta);
 
             HttpServerResponse response = context.response();
             response.putHeader("Content-Type", "application/json");
